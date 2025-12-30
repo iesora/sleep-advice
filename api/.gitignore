@@ -1,0 +1,16 @@
+.DS_Store
+node_modules/
+dist/
+.next/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 環境変数ファイル
+.env
+.development.env
+*.local.env
+api/.development.env
+admin/.env
+chrome-extension/config/config.dev.js
+chrome-extension/config/config.prod.js
