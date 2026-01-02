@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AssemblyAI } from 'assemblyai';
 import { TranscribeDto } from './dto/transcribe.dto';
@@ -28,49 +28,29 @@ export class AssemblyAIService {
    * 音声URLから文字起こしを実行
    */
   async transcribe(dto: TranscribeDto): Promise<any> {
-    try {
-      this.logger.log(
-        `文字起こし開始: audioUrl=${dto.audioUrl.substring(0, 50)}...`,
-      );
+    console.log(dto);
 
-      const params = {
-        audio: dto.audioUrl,
-        speech_models: ['universal'],
-      };
+    this.logger.log(
+      `文字起こし開始: audioUrl=${dto.audioUrl.substring(0, 50)}...`,
+    );
 
-      const transcript = await this.client.transcripts.transcribe(params);
+    const params = {
+      audio: dto.audioUrl,
+      speech_models: ['universal'],
+      language_code: 'ja',
+    };
 
-      this.logger.log(`文字起こし成功: transcriptId=${transcript.id}`);
+    const transcript = await this.client.transcripts.transcribe(params);
 
-      return {
-        id: transcript.id,
-        text: transcript.text,
-        status: transcript.status,
-        audioUrl: dto.audioUrl,
-      };
-    } catch (error: any) {
-      this.logger.error(`文字起こしエラー: ${error.message}`, error.stack);
+    console.log('assemblyai transcript:', transcript);
 
-      // AssemblyAI SDKのエラーを適切にハンドリング
-      if (error.status_code) {
-        throw new HttpException(
-          {
-            statusCode: error.status_code,
-            message: error.message || '文字起こしに失敗しました',
-            error: error,
-          },
-          error.status_code,
-        );
-      }
+    this.logger.log(`文字起こし成功: transcriptId=${transcript.id}`);
 
-      // その他のエラー
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-          message: `文字起こし中にエラーが発生しました: ${error.message}`,
-        },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return {
+      id: transcript.id,
+      text: transcript.text,
+      status: transcript.status,
+      audioUrl: dto.audioUrl,
+    };
   }
 }
