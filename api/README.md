@@ -80,6 +80,135 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 - Website - [https://nestjs.com](https://nestjs.com/)
 - Twitter - [@nestframework](https://twitter.com/nestframework)
 
+## Hume AI 動画解析機能
+
+このアプリケーションには、Hume AI APIを使用した動画解析機能が実装されています。
+
+### 環境変数の設定
+
+`.env`ファイルに以下の環境変数を設定してください：
+
+```bash
+# 必須
+HUME_API_KEY=your-api-key-here
+
+# オプション
+HUME_BASE_URL=https://api.hume.ai  # デフォルト値
+HUME_ENABLE_TRANSCRIPT=false        # "true"にするとtranscriptを有効化
+HUME_PROSODY_GRANULARITY=utterance  # デフォルト値
+HUME_MAX_FILE_SIZE=104857600        # デフォルト100MB（bytes）
+HUME_TIMEOUT=60000                  # デフォルト60秒（milliseconds）
+```
+
+### API エンドポイント
+
+#### 1. URLからジョブを作成
+
+```bash
+curl -X POST http://localhost:3000/hume/jobs/url \
+  -H "Content-Type: application/json" \
+  -d '{
+    "videoUrl": "https://example.com/video.mp4",
+    "models": {
+      "face": true,
+      "prosody": true,
+      "transcript": false
+    }
+  }'
+```
+
+**レスポンス例:**
+```json
+{
+  "jobId": "job-12345",
+  "status": "QUEUED",
+  "raw": { ... }
+}
+```
+
+#### 2. ファイルアップロードからジョブを作成
+
+```bash
+curl -X POST http://localhost:3000/hume/jobs/upload \
+  -F "file=@/path/to/video.mp4" \
+  -F 'models={"face":true,"prosody":true,"transcript":false}'
+```
+
+**注意:** `models`パラメータはオプションです。省略した場合、デフォルト設定（face=true, prosody=true, transcript=HUME_ENABLE_TRANSCRIPTの値）が使用されます。
+
+#### 3. ジョブの状態を取得
+
+```bash
+curl http://localhost:3000/hume/jobs/job-12345
+```
+
+**レスポンス例:**
+```json
+{
+  "jobId": "job-12345",
+  "status": "COMPLETED",
+  "raw": { ... }
+}
+```
+
+#### 4. 予測結果を取得
+
+```bash
+curl http://localhost:3000/hume/jobs/job-12345/predictions
+```
+
+**注意:** 予測結果は非常に大きくなる可能性があります。本番環境では、gzip圧縮を有効化することを推奨します。
+
+### モデル設定
+
+- **face**: 表情解析（デフォルト: true）
+- **prosody**: 声の特徴量解析（デフォルト: true）
+- **transcript**: 会話文（speech-to-text）取得（デフォルト: HUME_ENABLE_TRANSCRIPT環境変数の値）
+
+### よくある落とし穴と注意事項
+
+1. **動画サイズ**: 
+   - デフォルトで100MBまで。大きなファイルを処理する場合は`HUME_MAX_FILE_SIZE`を調整してください。
+   - 動画が大きいほど処理時間が長くなります。
+
+2. **レスポンスサイズ**: 
+   - 予測結果は非常に大きくなる可能性があります（数MB〜数十MB）。
+   - 本番環境では、NestJSの`compression`ミドルウェアを有効化することを推奨します：
+     ```bash
+     npm install compression
+     npm install --save-dev @types/compression
+     ```
+     その後、`main.ts`で有効化：
+     ```typescript
+     import * as compression from 'compression';
+     app.use(compression());
+     ```
+
+3. **Webhookの推奨**: 
+   - ジョブの完了を待つためにポーリングするのではなく、Hume AIのWebhook機能を使用することを推奨します。
+   - これにより、サーバーリソースの無駄を削減できます。
+
+4. **タイムアウト**: 
+   - デフォルトで60秒。大きなファイルやネットワークが遅い場合は`HUME_TIMEOUT`を調整してください。
+
+5. **ファイル形式**: 
+   - サポートされている形式: MP4, WebM, MOV（QuickTime）
+   - 他の形式を使用する場合は、事前に変換してください。
+
+6. **APIキーのセキュリティ**: 
+   - APIキーはログに出力されませんが、環境変数として安全に管理してください。
+   - `.env`ファイルは`.gitignore`に含まれていることを確認してください。
+
+### テスト
+
+```bash
+# ユニットテスト
+npm run test hume.service.spec
+
+# カバレッジ
+npm run test:cov
+```
+
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
